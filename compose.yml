@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .infrastructure/Dockerfile
+    container_name: weather_app
+    env_file: ".env"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - clickhouse
+    networks:
+      - persistence-db
+      - analytic-db
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: weather_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: weather_by_geo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - persistence-db
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: weather_clickhouse
+    environment:
+      CLICKHOUSE_DB: weather_by_geo
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    ports:
+      - "9000:9000"
+      - "8125:8123"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - analytic-db
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+
+networks:
+  persistence-db:
+    driver: bridge
+  analytic-db:
+    driver: bridge
