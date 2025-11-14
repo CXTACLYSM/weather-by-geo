@@ -8,8 +8,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
-      - clickhouse
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     networks:
       - persistence-db
       - analytic-db
@@ -25,6 +27,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./.infrastructure/local/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./.infrastructure/local/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d weather_by_geo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - persistence-db
 
@@ -40,6 +50,13 @@ services:
       - "8125:8123"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./.infrastructure/local/clickhouse/clickhouse.xml:/etc/clickhouse-server/config.d/custom.xml
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - analytic-db
 
