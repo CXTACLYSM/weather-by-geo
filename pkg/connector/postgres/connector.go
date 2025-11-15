@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/CXTACLYSM/weather-by-geo/config/database/postgres"
+	"github.com/CXTACLYSM/weather-by-geo/configs/database/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

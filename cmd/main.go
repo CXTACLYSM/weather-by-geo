@@ -8,15 +8,15 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CXTACLYSM/weather-by-geo/common/connector/clickhouse"
-	"github.com/CXTACLYSM/weather-by-geo/common/connector/postgres"
-	"github.com/CXTACLYSM/weather-by-geo/config"
+	"github.com/CXTACLYSM/weather-by-geo/configs"
+	"github.com/CXTACLYSM/weather-by-geo/pkg/connector/clickhouse"
+	"github.com/CXTACLYSM/weather-by-geo/pkg/connector/postgres"
 )
 
 func main() {
-	cfg, err := config.Create()
+	cfg, err := configs.Create()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("Failed to load configs: %v", err)
 	}
 
 	pgConn, err := postgres.NewConnector(cfg.Postgres)
@@ -35,16 +35,16 @@ func main() {
 	log.Println("Successfully posted webhook URL")
 
 	setupHttp()
-	log.Printf("Starting server on port %s", cfg.App.Port)
-	if err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.App.Port), nil); err != nil {
+	log.Printf("Starting server on port 8080")
+	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
-func setupWebhook(cfg *config.Config) {
+func setupWebhook(cfg *configs.Config) {
 	url := fmt.Sprintf("https://%s/bot%s/setWebhook", cfg.Telegram.Host, cfg.Telegram.Token)
 	data := map[string]interface{}{
-		"url": cfg.Proxy.Url("https"),
+		"url": cfg.App.Url("https"),
 	}
 	log.Printf("Webhook URL: %s\n", data["url"])
 

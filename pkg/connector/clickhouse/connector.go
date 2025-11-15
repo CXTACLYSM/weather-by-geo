@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	clickhouseConfig "github.com/CXTACLYSM/weather-by-geo/config/database/clickhouse"
+	clickhouseConfig "github.com/CXTACLYSM/weather-by-geo/configs/database/clickhouse"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
