@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 
 	"github.com/CXTACLYSM/weather-by-geo/configs"
+	"github.com/CXTACLYSM/weather-by-geo/internal/shared/infrastructure/telegram"
 	"github.com/CXTACLYSM/weather-by-geo/pkg/connector/clickhouse"
 	"github.com/CXTACLYSM/weather-by-geo/pkg/connector/postgres"
 )
@@ -31,41 +29,24 @@ func main() {
 	}
 	defer chConn.Close()
 
-	setupWebhook(cfg)
+	tlClient := telegram.NewClient(cfg)
+	tlClient.SetWebhook()
+
 	log.Println("Successfully posted webhook URL")
 
-	setupHttp()
+	tlReceiver := telegram.NewReceiver(cfg)
+	tlHandler := telegram.NewHandler(cfg)
+
+	http.HandleFunc("/", webhookHandler(tlReceiver, tlHandler, tlClient))
+
 	log.Printf("Starting server on port 8080")
 	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
-func setupWebhook(cfg *configs.Config) {
-	url := fmt.Sprintf("https://%s/bot%s/setWebhook", cfg.Telegram.Host, cfg.Telegram.Token)
-	data := map[string]interface{}{
-		"url": cfg.App.Url("https"),
-	}
-	log.Printf("Webhook URL: %s\n", data["url"])
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Fatalf("Failed to marshal data: %v", err)
-	}
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Fatalf("Failed to post data: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Fatalf("Telegram API error (status %d): %s", resp.StatusCode, string(body))
-	}
-}
-
-func setupHttp() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func webhookHandler(receiver *telegram.Receiver, handler *telegram.Handler, client *telegram.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -73,25 +54,29 @@ func setupHttp() {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "Cannot read body", http.StatusBadRequest)
-			return
-		}
-		defer r.Body.Close()
-
-		var data map[string]interface{}
-		if err := json.Unmarshal(body, &data); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			http.Error(w, "Cannot read body", http.StatusInternalServerError)
 			return
 		}
 
-		prettyJSON, err := json.MarshalIndent(data, "", "  ")
+		update, err := receiver.Receive(body)
 		if err != nil {
-			log.Printf("Failed to format JSON: %v", err)
+			http.Error(w, "Cannot parse body", http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Received:\n%s", string(prettyJSON))
+
+		response, err := handler.Handle(update)
+		if err != nil {
+			http.Error(w, "Cannot handle update", http.StatusInternalServerError)
+			return
+		}
+
+		err = client.SendMessage(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-	})
+	}
 }

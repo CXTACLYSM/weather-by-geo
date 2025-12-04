@@ -12,10 +12,6 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
-      migrate-postgres:
-        condition: service_completed_successfully
-      migrate-clickhouse:
-        condition: service_completed_successfully
     networks:
       - persistence-db
       - analytic-db
@@ -50,7 +46,7 @@ services:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: default
     ports:
-      - "9000:9000"
+      - "9100:9000"
       - "8125:8123"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
