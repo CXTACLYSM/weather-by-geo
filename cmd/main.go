@@ -64,7 +64,6 @@ func webhookHandler(telegramClient *telegram.Client, weatherClient *openMeteo.Cl
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
