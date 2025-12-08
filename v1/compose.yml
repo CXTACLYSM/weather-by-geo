@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: builds/Dockerfile
+    container_name: weather_app_v1
+    env_file: ".env"
+    ports:
+      - "8080:443"

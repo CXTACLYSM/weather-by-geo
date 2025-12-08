@@ -8,11 +8,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/CXTACLYSM/weather-by-geo/configs"
 )
-
-const UrlPattern = "https://%s/bot%s/%s"
 
 const (
 	OperationSendMessage = "sendMessage"
@@ -35,7 +34,7 @@ func NewClient(cfg *configs.Config) *Client {
 }
 
 func (c *Client) SendMessage(response *Response) error {
-	url, err := c.url(OperationSendMessage)
+	sendMessageUrl, err := c.url(OperationSendMessage)
 	if err != nil {
 		return errors.New("failed to send message")
 	}
@@ -45,7 +44,7 @@ func (c *Client) SendMessage(response *Response) error {
 		return errors.New("failed to marshal response")
 	}
 
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	res, err := http.Post(sendMessageUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return errors.New("failed to send message")
 	}
@@ -55,7 +54,7 @@ func (c *Client) SendMessage(response *Response) error {
 }
 
 func (c *Client) SetWebhook() {
-	url, err := c.url(OperationSetWebhook)
+	wehbookUrl, err := c.url(OperationSetWebhook)
 	if err != nil {
 		log.Fatalf("Failed to get telegram setWebhook URL: %v", err)
 	}
@@ -68,7 +67,7 @@ func (c *Client) SetWebhook() {
 	if err != nil {
 		log.Fatalf("Failed to marshal data: %v", err)
 	}
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(wehbookUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Fatalf("Failed to post data: %v", err)
 	}
@@ -84,5 +83,12 @@ func (c *Client) url(operation string) (string, error) {
 	if _, ok := allowedOperations[operation]; !ok {
 		return "", fmt.Errorf("operation %q is not supported", operation)
 	}
-	return fmt.Sprintf(UrlPattern, c.cfg.Telegram.Host, c.cfg.Telegram.Token, operation), nil
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   c.cfg.Telegram.Host,
+		Path:   fmt.Sprintf("/bot%s/%s", c.cfg.Telegram.Token, operation),
+	}
+
+	return u.String(), nil
 }

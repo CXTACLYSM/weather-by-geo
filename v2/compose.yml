@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: builds/Dockerfile
-    container_name: weather_app
+    container_name: weather_app_v2
     env_file: ".env"
     ports:
-      - "8080:8080"
+      - "8080:443"

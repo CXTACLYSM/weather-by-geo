@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -18,14 +19,15 @@ func main() {
 
 	tlClient := telegram.NewClient(cfg)
 	tlClient.SetWebhook()
-	weatherClient := openMeteo.NewClient(cfg.OpenMeteo)
-
 	log.Println("Successfully posted webhook URL")
 
+	weatherClient := openMeteo.NewClient(cfg.OpenMeteo)
 	http.HandleFunc("/", webhookHandler(tlClient, weatherClient))
 
+	socketStr := fmt.Sprintf("0.0.0.0:%s", cfg.App.Port)
+
 	log.Printf("Starting server on port 8080")
-	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
+	if err := http.ListenAndServe(socketStr, nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
